@@ -99,6 +99,8 @@ class Prompt:
                         self.FONT_1.get_height() + self.output_surf.get_height(),
                     )
                 )
+                self.released = True
+                self.form_surface()
 
     def blink_cursor(self):
         if not self.focused:
@@ -108,6 +110,8 @@ class Prompt:
             self.blinky_cursor = next(self.blink_cursors)
 
     def form_surface(self):
+        if self.released:
+            self.blinky_cursor = ""
         self.surf = self.FONT_1.render(
             f" {''.join(self.text)}{self.blinky_cursor}", True, "white"
         )
@@ -134,7 +138,7 @@ class Prompt:
 
         self.on_enter()
 
-    def draw(self):
+    def draw(self, offset):
         self.full_surf = pygame.Surface(self.full_surf.get_size(), pygame.SRCALPHA)
         render_at(self.full_surf, self.surf, "topleft")
         if self.output_surf is not None:
@@ -144,7 +148,7 @@ class Prompt:
                 "topleft",
                 (0, self.FONT_1.get_height()),
             )
-        render_at(self.shared.screen, self.full_surf, "topleft", (10, 10))
+        render_at(self.shared.screen, self.full_surf, "topleft", (10, 10 + offset))
 
 
 class Terminal:
@@ -166,6 +170,12 @@ class Terminal:
     def update(self):
         self.current_prompt.update()
 
+        if self.current_prompt.released:
+            self.prompts.append(Prompt())
+            self.current_prompt_index += 1
+
     def draw(self):
+        offset = 0
         for prompt in self.prompts:
-            prompt.draw()
+            prompt.draw(offset)
+            offset += prompt.full_surf.get_height() + 10
