@@ -8,10 +8,14 @@ from src.utils import Time, get_font, render_at
 
 
 class Prompt:
-    FONT = get_font("assets/fonts/regular1.ttf", 16)
+    FONT_1 = get_font("assets/fonts/bold1.ttf", 16)
+    FONT_2 = get_font("assets/fonts/regular1.ttf", 16)
 
     def __init__(self) -> None:
         self.shared = Shared()
+        self.full_surf = pygame.Surface(
+            (Shared.SCREEN_WIDTH, self.FONT_1.get_height()), pygame.SRCALPHA
+        )
         self.released = False
         self.text = []
         self.blink_cursors = itertools.cycle(("|", ""))
@@ -21,6 +25,8 @@ class Prompt:
         self.del_timer = Time(0.1)
         self.start = False
         self.focused = True
+        self.output_surf: None | pygame.Surface = None
+        self.output: None | str = None
 
     def remove_last_char(self):
         if not self.text:
@@ -30,6 +36,7 @@ class Prompt:
     def get_input(self):
         for event in self.shared.events:
             if event.type == pygame.TEXTINPUT:
+                self.blinky_cursor = "|"
                 self.text.append(event.text)
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_BACKSPACE:
@@ -49,6 +56,25 @@ class Prompt:
         if self.shared.keys[pygame.K_x] and self.shared.keys[pygame.K_LCTRL]:
             self.text.clear()
 
+    def on_enter(self):
+        for event in self.shared.events:
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                self.focused = False
+                self.output = subprocess.check_output(
+                    "".join(self.text), shell=True, universal_newlines=True
+                )
+                self.output_surf = self.FONT_2.render(
+                    self.output,
+                    True,
+                    "white",
+                )
+                self.full_surf = pygame.Surface(
+                    (
+                        Shared.SCREEN_WIDTH,
+                        self.FONT_1.get_height() + self.output_surf.get_height(),
+                    )
+                )
+
     def blink_cursor(self):
         if not self.focused:
             self.blinky_cursor = ""
@@ -57,10 +83,10 @@ class Prompt:
             self.blinky_cursor = next(self.blink_cursors)
 
     def form_surface(self):
-        self.surf = self.FONT.render(
+        self.surf = self.FONT_1.render(
             f" {''.join(self.text)}{self.blinky_cursor}", True, "white"
         )
-        self.region = self.surf.get_rect(topleft=(10, 10))
+        self.region = self.full_surf.get_rect(topleft=(10, 10))
 
     def regional_input(self):
         if not self.shared.clicked:
@@ -81,8 +107,19 @@ class Prompt:
         self.blink_cursor()
         self.form_surface()
 
+        self.on_enter()
+
     def draw(self):
-        render_at(self.shared.screen, self.surf, "topleft", (10, 10))
+        self.full_surf = pygame.Surface(self.full_surf.get_size(), pygame.SRCALPHA)
+        render_at(self.full_surf, self.surf, "topleft")
+        if self.output_surf is not None:
+            render_at(
+                self.full_surf,
+                self.output_surf,
+                "topleft",
+                (0, self.FONT_1.get_height()),
+            )
+        render_at(self.shared.screen, self.full_surf, "topleft", (10, 10))
 
 
 class Terminal:
