@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 import pygame
 
@@ -59,5 +60,6 @@ class Core:
 
 
 def main():
+    os.system("cls || clear")
     game = Core()
     asyncio.run(game.run())

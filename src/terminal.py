@@ -1,5 +1,7 @@
 import itertools
+import re
 import subprocess
+import sys
 
 import pygame
 
@@ -27,6 +29,7 @@ class Prompt:
         self.focused = True
         self.output_surf: None | pygame.Surface = None
         self.output: None | str = None
+        self.executable = "pwsh" if sys.platform == "win32" else None
 
     def remove_last_char(self):
         if not self.text:
@@ -37,6 +40,7 @@ class Prompt:
         for event in self.shared.events:
             if event.type == pygame.TEXTINPUT:
                 self.blinky_cursor = "|"
+                self.focused = True
                 self.text.append(event.text)
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_BACKSPACE:
@@ -56,13 +60,34 @@ class Prompt:
         if self.shared.keys[pygame.K_x] and self.shared.keys[pygame.K_LCTRL]:
             self.text.clear()
 
+    def cleanse_output(self):
+        self.output = re.sub(r"\x1b\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]", "", self.output)
+
+    def gain_output(self):
+        command = "".join(self.text)
+        try:
+            if self.executable is None:
+                self.output = subprocess.check_output(
+                    command,
+                    shell=True,
+                    universal_newlines=True,
+                )
+
+                return
+            self.output = subprocess.check_output(
+                [self.executable, "-Command", command],
+                shell=True,
+                universal_newlines=True,
+            )
+        except Exception as e:
+            self.output = f"Command '{command}' returned non-zero exit status 1"
+
     def on_enter(self):
         for event in self.shared.events:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
                 self.focused = False
-                self.output = subprocess.check_output(
-                    "".join(self.text), shell=True, universal_newlines=True
-                )
+                self.gain_output()
+                self.cleanse_output()
                 self.output_surf = self.FONT_2.render(
                     self.output,
                     True,
@@ -100,11 +125,11 @@ class Prompt:
             self.focused = False
 
     def update(self):
+        self.blink_cursor()
         self.get_input()
         self.on_delete_line()
         self.regional_input()
 
-        self.blink_cursor()
         self.form_surface()
 
         self.on_enter()
