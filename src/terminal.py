@@ -1,7 +1,9 @@
 import itertools
+import os
 import re
 import subprocess
 import sys
+from pathlib import Path
 
 import pygame
 
@@ -22,7 +24,6 @@ class Prompt:
         self.text = []
         self.blink_cursors = itertools.cycle(("|", ""))
         self.blinky_cursor = next(self.blink_cursors)
-        self.form_surface()
         self.timer = Time(0.5)
         self.del_timer = Time(0.1)
         self.start = False
@@ -30,6 +31,8 @@ class Prompt:
         self.output_surf: None | pygame.Surface = None
         self.output: None | str = None
         self.executable = "pwsh" if sys.platform == "win32" else None
+        self.command = ""
+        self.form_surface()
 
     def remove_last_char(self):
         if not self.text:
@@ -68,9 +71,7 @@ class Prompt:
         try:
             if self.executable is None:
                 self.output = subprocess.check_output(
-                    command,
-                    shell=True,
-                    universal_newlines=True,
+                    command, shell=True, universal_newlines=True, cwd=self.shared.cwd
                 )
 
                 return
@@ -78,6 +79,7 @@ class Prompt:
                 [self.executable, "-Command", command],
                 shell=True,
                 universal_newlines=True,
+                cwd=self.shared.cwd,
             )
         except Exception as e:
             self.output = f"Command '{command}' returned non-zero exit status 1"
@@ -85,6 +87,7 @@ class Prompt:
     def on_enter(self):
         for event in self.shared.events:
             if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
+                self.command = "".join(self.text)
                 self.focused = False
                 self.gain_output()
                 self.cleanse_output()
@@ -113,7 +116,9 @@ class Prompt:
         if self.released:
             self.blinky_cursor = ""
         self.surf = self.FONT_1.render(
-            f" {''.join(self.text)}{self.blinky_cursor}", True, "white"
+            f"{self.shared.cwd.name}  {''.join(self.text)}{self.blinky_cursor}",
+            True,
+            "white",
         )
         self.region = self.full_surf.get_rect(topleft=(10, 10))
 
@@ -154,6 +159,8 @@ class Prompt:
 class Terminal:
     def __init__(self) -> None:
         self.shared = Shared()
+        self.shared.cwd = Path(os.path.expanduser("~"))
+
         self.prompts: list[Prompt] = [Prompt()]
         self.__current_prompt_index = 0
         self.current_prompt = self.prompts[self.__current_prompt_index]
@@ -169,6 +176,24 @@ class Terminal:
 
     def update(self):
         self.current_prompt.update()
+        if self.current_prompt.command == "cls":
+            self.prompts.clear()
+            self.prompts.append(Prompt())
+            self.current_prompt_index = 0
+        elif self.current_prompt.command == "exit":
+            exit()
+        elif "cd" in self.current_prompt.command:
+            self.shared.cwd = subprocess.check_output(
+                [
+                    self.current_prompt.executable,
+                    "-Command",
+                    f"{self.current_prompt.command};py -c 'import os;print(os.getcwd())'",
+                ],
+                shell=True,
+                universal_newlines=True,
+                cwd=self.shared.cwd,
+            )
+            self.shared.cwd = Path(self.shared.cwd.replace("\\", "/"))
 
         if self.current_prompt.released:
             self.prompts.append(Prompt())
