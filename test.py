@@ -1,10 +1,15 @@
 import subprocess
 
-# Ask the user to enter a command
-command = "py"
 
-# Use subprocess to execute the command and capture the output
-output = subprocess.check_output(command, shell=True, universal_newlines=True)
+def convert_backslashes(s):
+    return s.encode("unicode_escape").decode()
 
-# Print the output
-print(output)
+
+s = r"C:\Users\axis\Downloads"
+converted_s = convert_backslashes(s)
+print(converted_s)  # Output: C:\\Users\\axis\\Downloads
+
+result = subprocess.run(
+    ["ls"], cwd="D:/d/p", capture_output=True, text=True, shell=True
+)
+print(result.stdout)

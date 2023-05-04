@@ -30,7 +30,7 @@ class Prompt:
         self.focused = True
         self.output_surf: None | pygame.Surface = None
         self.output: None | str = None
-        self.executable = "pwsh" if sys.platform == "win32" else None
+        self.executable = "pwsh"
         self.command = ""
         self.form_surface()
 
@@ -69,12 +69,6 @@ class Prompt:
     def gain_output(self):
         command = "".join(self.text)
         try:
-            if self.executable is None:
-                self.output = subprocess.check_output(
-                    command, shell=True, universal_newlines=True, cwd=self.shared.cwd
-                )
-
-                return
             self.output = subprocess.check_output(
                 [self.executable, "-Command", command],
                 shell=True,
@@ -115,6 +109,7 @@ class Prompt:
     def form_surface(self):
         if self.released:
             self.blinky_cursor = ""
+        print(f"{self.shared.cwd.name}  {''.join(self.text)}{self.blinky_cursor}")
         self.surf = self.FONT_1.render(
             f"{self.shared.cwd.name}  {''.join(self.text)}{self.blinky_cursor}",
             True,
@@ -183,17 +178,16 @@ class Terminal:
         elif self.current_prompt.command == "exit":
             exit()
         elif "cd" in self.current_prompt.command:
+            command = (
+                f"{self.current_prompt.command};py -c 'import os;print(os.getcwd())'"
+            )
             self.shared.cwd = subprocess.check_output(
-                [
-                    self.current_prompt.executable,
-                    "-Command",
-                    f"{self.current_prompt.command};py -c 'import os;print(os.getcwd())'",
-                ],
+                [self.current_prompt.executable, "-Command", command],
                 shell=True,
                 universal_newlines=True,
                 cwd=self.shared.cwd,
             )
-            self.shared.cwd = Path(self.shared.cwd.replace("\\", "/"))
+            self.shared.cwd = Path(self.shared.cwd.strip())
 
         if self.current_prompt.released:
             self.prompts.append(Prompt())
