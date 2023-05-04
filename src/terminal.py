@@ -109,7 +109,6 @@ class Prompt:
     def form_surface(self):
         if self.released:
             self.blinky_cursor = ""
-        print(f"{self.shared.cwd.name}  {''.join(self.text)}{self.blinky_cursor}")
         self.surf = self.FONT_1.render(
             f"{self.shared.cwd.name}  {''.join(self.text)}{self.blinky_cursor}",
             True,
