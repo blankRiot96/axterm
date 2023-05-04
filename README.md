@@ -1,6 +1,6 @@
 <div align="center">
-    <img src="assets/images/logo.png" width="100">
-    <h2><b>Simple • Minimalistic • Aesthetic</b></h2>
+    <img src="assets/images/logo.png" width="100"><br>
+    <p1>Simple • Minimalistic • Aesthetic</p1>
 </div>
 
 ## What is Axterm?
