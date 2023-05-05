@@ -18,7 +18,7 @@ class Prompt:
     def __init__(self) -> None:
         self.shared = Shared()
         self.full_surf = pygame.Surface(
-            (Shared.SCREEN_WIDTH, self.FONT_1.get_height()), pygame.SRCALPHA
+            (self.shared.screen.get_width(), self.FONT_1.get_height()), pygame.SRCALPHA
         )
         self.released = False
         self.text = []
@@ -168,25 +168,30 @@ class Terminal:
         self.__current_prompt_index = val
         self.current_prompt = self.prompts[val]
 
+    def change_directory(self):
+        command = f"{self.current_prompt.command};pwd"
+        output = subprocess.check_output(
+            [self.current_prompt.executable, "-Command", command],
+            shell=True,
+            universal_newlines=True,
+            cwd=self.shared.cwd,
+        )
+        stripped = output.strip()
+        lines = stripped.splitlines()
+        line = lines[-1].replace("\\", "/")
+        path = bytes(line, "ascii").decode("unicode-escape")
+        self.shared.cwd = Path(path)
+
     def update(self):
         self.current_prompt.update()
-        if self.current_prompt.command == "cls":
+        if self.current_prompt.command in ("cls", "clear"):
             self.prompts.clear()
             self.prompts.append(Prompt())
             self.current_prompt_index = 0
         elif self.current_prompt.command == "exit":
             exit()
         elif "cd" in self.current_prompt.command:
-            command = (
-                f"{self.current_prompt.command};py -c 'import os;print(os.getcwd())'"
-            )
-            self.shared.cwd = subprocess.check_output(
-                [self.current_prompt.executable, "-Command", command],
-                shell=True,
-                universal_newlines=True,
-                cwd=self.shared.cwd,
-            )
-            self.shared.cwd = Path(self.shared.cwd.strip())
+            self.change_directory()
 
         if self.current_prompt.released:
             self.prompts.append(Prompt())
