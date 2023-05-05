@@ -42,6 +42,7 @@ class Core:
         self.shared.dt = self.clock.tick() / 1000
         self.shared.dt = min(self.shared.dt, 0.1)
         self.shared.mouse_pos = pygame.mouse.get_pos()
+        self.shared.mouse_press = pygame.mouse.get_pressed()
         self.shared.keys = pygame.key.get_pressed()
 
         self.state_manager.update()

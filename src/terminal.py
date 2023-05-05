@@ -2,6 +2,7 @@ import itertools
 import os
 import re
 import subprocess
+import time
 from pathlib import Path
 
 import pygame
@@ -147,10 +148,13 @@ class Prompt:
                 "topleft",
                 (0, self.FONT_1.get_height()),
             )
-        render_at(self.shared.screen, self.full_surf, "topleft", (10, 10 + offset))
+        self.region.topleft = (10, 10 + offset)
+        self.shared.screen.blit(self.full_surf, self.region.topleft)
 
 
 class Terminal:
+    SCROLL_SCALE = 15
+
     def __init__(self) -> None:
         self.shared = Shared()
         self.shared.cwd = Path(os.path.expanduser("~"))
@@ -159,6 +163,9 @@ class Terminal:
         self.__current_prompt_index = 0
         self.current_prompt = self.prompts[self.__current_prompt_index]
         self.copy_buttons = []
+
+        self.perm_offset = 0
+        self.start = None
 
     @property
     def current_prompt_index(self) -> int:
@@ -185,30 +192,52 @@ class Terminal:
         path = bytes(line, "ascii").decode("unicode-escape")
         self.shared.cwd = Path(path)
 
-    def update(self):
-        self.current_prompt.update()
+    def handle_perm_offset(self):
+        for event in self.shared.events:
+            if event.type == pygame.MOUSEWHEEL:
+                self.perm_offset += event.y * self.SCROLL_SCALE
+
+    def on_page_up(self):
+        if self.shared.keys[pygame.K_LCTRL] and self.shared.keys[pygame.K_g]:
+            self.perm_offset = 0
+
+    def clear_prompts(self):
+        self.copy_buttons.clear()
+        self.prompts.clear()
+        self.prompts.append(Prompt())
+        self.current_prompt_index = 0
+
+    def special_commands(self):
         if self.current_prompt.command in ("cls", "clear"):
-            self.copy_buttons.clear()
-            self.prompts.clear()
-            self.prompts.append(Prompt())
-            self.current_prompt_index = 0
+            self.clear_prompts()
         elif self.current_prompt.command == "exit":
             exit()
         elif "cd" in self.current_prompt.command:
             self.change_directory()
 
-        if self.current_prompt.released:
-            self.copy_buttons.append(CopyButton(self.current_prompt.output))
-            self.prompts.append(Prompt())
-            self.current_prompt_index += 1
+    def on_release(self):
+        if not self.current_prompt.released:
+            return
+        self.copy_buttons.append(CopyButton(self.current_prompt.output))
+        self.prompts.append(Prompt())
+        self.current_prompt_index += 1
 
+    def update_copies(self):
         for btn in self.copy_buttons:
             btn.update()
+
+    def update(self):
+        self.current_prompt.update()
+        self.special_commands()
+        self.on_release()
+        self.update_copies()
+        self.handle_perm_offset()
+        self.on_page_up()
 
     def draw(self):
         offset = 0
         for prompt, btn in itertools.zip_longest(self.prompts, self.copy_buttons):
-            prompt.draw(offset)
+            prompt.draw(offset + self.perm_offset)
             if btn is not None:
-                btn.draw(offset)
+                btn.draw(offset + self.perm_offset)
             offset += prompt.full_surf.get_height() + 10
