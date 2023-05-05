@@ -2,11 +2,11 @@ import itertools
 import os
 import re
 import subprocess
-import sys
 from pathlib import Path
 
 import pygame
 
+from src.button import CopyButton
 from src.shared import Shared
 from src.utils import Time, get_font, render_at
 
@@ -158,6 +158,7 @@ class Terminal:
         self.prompts: list[Prompt] = [Prompt()]
         self.__current_prompt_index = 0
         self.current_prompt = self.prompts[self.__current_prompt_index]
+        self.copy_buttons = []
 
     @property
     def current_prompt_index(self) -> int:
@@ -169,6 +170,8 @@ class Terminal:
         self.current_prompt = self.prompts[val]
 
     def change_directory(self):
+        """Changes the directory in which the next prompt spawns"""
+
         command = f"{self.current_prompt.command};pwd"
         output = subprocess.check_output(
             [self.current_prompt.executable, "-Command", command],
@@ -185,6 +188,7 @@ class Terminal:
     def update(self):
         self.current_prompt.update()
         if self.current_prompt.command in ("cls", "clear"):
+            self.copy_buttons.clear()
             self.prompts.clear()
             self.prompts.append(Prompt())
             self.current_prompt_index = 0
@@ -194,11 +198,17 @@ class Terminal:
             self.change_directory()
 
         if self.current_prompt.released:
+            self.copy_buttons.append(CopyButton(self.current_prompt.output))
             self.prompts.append(Prompt())
             self.current_prompt_index += 1
 
+        for btn in self.copy_buttons:
+            btn.update()
+
     def draw(self):
         offset = 0
-        for prompt in self.prompts:
+        for prompt, btn in itertools.zip_longest(self.prompts, self.copy_buttons):
             prompt.draw(offset)
+            if btn is not None:
+                btn.draw(offset)
             offset += prompt.full_surf.get_height() + 10

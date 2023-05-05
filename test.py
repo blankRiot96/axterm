@@ -1,16 +1,3 @@
-from pathlib import Path
+import pyperclip
 
-test = """
-
-Path
-----
-D:\\d\\p\\axterm
-
-"""
-
-stripped = test.strip()
-lines = stripped.splitlines()
-line = lines[-1].replace("\\", "/")
-path = bytes(line, "ascii").decode("unicode-escape")
-test = Path(path)
-print(test)
+pyperclip.copy("The text to be copied to the clipboard.")
