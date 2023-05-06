@@ -1,6 +1,10 @@
 # vscode
 .vscode/
 
+
+# Files to ignore
+command-history.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
