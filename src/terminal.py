@@ -2,12 +2,12 @@ import itertools
 import os
 import re
 import subprocess
-import time
 from pathlib import Path
 
 import pygame
 
 from src.button import CopyButton
+from src.data import DataManager, exact_match
 from src.shared import Shared
 from src.utils import Time, get_font, render_at
 
@@ -33,6 +33,8 @@ class Prompt:
         self.output: None | str = None
         self.executable = "pwsh"
         self.command = ""
+        self.sim_surf: pygame.Surface | None = None
+        self.suggestion: str | None = None
         self.form_surface()
 
     def remove_last_char(self):
@@ -59,6 +61,7 @@ class Prompt:
             self.blinky_cursor = "|"
             if self.del_timer.tick():
                 self.remove_last_char()
+        self.command = "".join(self.text)
 
     def on_delete_line(self):
         if self.shared.keys[pygame.K_x] and self.shared.keys[pygame.K_LCTRL]:
@@ -68,37 +71,50 @@ class Prompt:
         self.output = re.sub(r"\x1b\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]", "", self.output)
 
     def gain_output(self):
-        command = "".join(self.text)
         try:
             self.output = subprocess.check_output(
-                [self.executable, "-Command", command],
+                [self.executable, "-Command", self.command],
                 shell=True,
                 universal_newlines=True,
                 cwd=self.shared.cwd,
             )
         except Exception as e:
-            self.output = f"Command '{command}' returned non-zero exit status 1"
+            self.output = f"Command '{self.command}' returned non-zero exit status 1"
 
-    def on_enter(self):
-        for event in self.shared.events:
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_RETURN:
-                self.command = "".join(self.text)
-                self.focused = False
-                self.gain_output()
-                self.cleanse_output()
-                self.output_surf = self.FONT_2.render(
-                    self.output,
-                    True,
-                    "white",
-                )
-                self.full_surf = pygame.Surface(
-                    (
-                        Shared.SCREEN_WIDTH,
-                        self.FONT_1.get_height() + self.output_surf.get_height(),
-                    )
-                )
-                self.released = True
-                self.form_surface()
+    def on_enter(self, event):
+        if event.key != pygame.K_RETURN:
+            return
+
+        self.focused = False
+        self.gain_output()
+        self.cleanse_output()
+        self.output_surf = self.FONT_2.render(
+            self.output,
+            True,
+            "white",
+        )
+        self.full_surf = pygame.Surface(
+            (
+                Shared.SCREEN_WIDTH,
+                self.FONT_1.get_height() + self.output_surf.get_height(),
+            )
+        )
+        self.released = True
+        self.form_surface()
+
+    def on_fetch_command(self, key: int):
+        if key == pygame.K_UP:
+            self.shared.data.current_index -= 1
+        else:
+            self.shared.data.current_index += 1
+
+        self.text = list(self.shared.data.current_line)
+
+    def on_fetch_command_check(self, event):
+        if event.key not in (pygame.K_DOWN, pygame.K_UP):
+            return
+
+        self.on_fetch_command(event.key)
 
     def blink_cursor(self):
         if not self.focused:
@@ -111,11 +127,19 @@ class Prompt:
         if self.released:
             self.blinky_cursor = ""
         self.surf = self.FONT_1.render(
-            f"{self.shared.cwd.name}  {''.join(self.text)}{self.blinky_cursor}",
+            f"{self.shared.cwd.name}  {self.command}{self.blinky_cursor}",
             True,
             "white",
         )
         self.region = self.full_surf.get_rect(topleft=(10, 10))
+
+        if self.suggestion is None or not self.command:
+            self.sim_surf = None
+            return
+        self.sim_surf = self.FONT_1.render(
+            f"{self.shared.cwd.name}  {self.suggestion}", True, "white"
+        )
+        self.sim_surf.set_alpha(150)
 
     def regional_input(self):
         if not self.shared.clicked:
@@ -128,18 +152,36 @@ class Prompt:
         else:
             self.focused = False
 
+    def get_suggestion(self):
+        self.suggestion = exact_match(self.shared.data.command_history, self.command)
+        if self.suggestion is None:
+            return
+
+    def on_autocomplete(self, event):
+        if event.key in (pygame.K_TAB, pygame.K_RIGHT) and self.suggestion is not None:
+            self.text = list(self.suggestion)
+
+    def event_pool(self):
+        for event in self.shared.events:
+            if event.type == pygame.KEYDOWN:
+                self.on_autocomplete(event)
+                self.on_fetch_command_check(event)
+                self.on_enter(event)
+
     def update(self):
         self.blink_cursor()
         self.get_input()
+        self.get_suggestion()
         self.on_delete_line()
         self.regional_input()
+        self.event_pool()
 
         self.form_surface()
 
-        self.on_enter()
-
     def draw(self, offset):
         self.full_surf = pygame.Surface(self.full_surf.get_size(), pygame.SRCALPHA)
+        if self.sim_surf is not None:
+            render_at(self.full_surf, self.sim_surf, "topleft")
         render_at(self.full_surf, self.surf, "topleft")
         if self.output_surf is not None:
             render_at(
@@ -157,6 +199,7 @@ class Terminal:
 
     def __init__(self) -> None:
         self.shared = Shared()
+        self.shared.data = DataManager()
         self.shared.cwd = Path(os.path.expanduser("~"))
 
         self.prompts: list[Prompt] = [Prompt()]
@@ -208,9 +251,12 @@ class Terminal:
         self.current_prompt_index = 0
 
     def special_commands(self):
+        if not self.current_prompt.released:
+            return
         if self.current_prompt.command in ("cls", "clear"):
             self.clear_prompts()
         elif self.current_prompt.command == "exit":
+            self.shared.data.on_exit()
             exit()
         elif "cd" in self.current_prompt.command:
             self.change_directory()
@@ -218,6 +264,8 @@ class Terminal:
     def on_release(self):
         if not self.current_prompt.released:
             return
+        self.shared.data.command_history.append(self.current_prompt.command)
+        self.shared.data.current_index = len(self.shared.data.command_history)
         self.copy_buttons.append(CopyButton(self.current_prompt.output))
         self.prompts.append(Prompt())
         self.current_prompt_index += 1

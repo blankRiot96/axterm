@@ -3,7 +3,7 @@
 
 
 # Files to ignore
-command-history.txt
+assets/data/
 test.py
 
 # Byte-compiled / optimized / DLL files

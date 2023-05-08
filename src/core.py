@@ -36,6 +36,7 @@ class Core:
         self.shared.events = pygame.event.get()
         for event in self.shared.events:
             if event.type == pygame.QUIT:
+                self.shared.data.on_exit()
                 raise SystemExit
 
         self.on_click()
