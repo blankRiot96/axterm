@@ -16,7 +16,6 @@ class Terminal:
 
     def __init__(self) -> None:
         self.shared = Shared()
-        self.shared.data = DataManager()
         self.shared.cwd = Path(os.path.expanduser("~"))
 
         self.prompts: list[Prompt] = [Prompt()]
@@ -70,9 +69,9 @@ class Terminal:
     def special_commands(self):
         if not self.current_prompt.released:
             return
-        if self.current_prompt.command in ("cls", "clear"):
+        if self.current_prompt.command.strip() in ("cls", "clear"):
             self.clear_prompts()
-        elif self.current_prompt.command == "exit":
+        elif self.current_prompt.command.strip() == "exit":
             self.shared.data.on_exit()
             exit()
         elif "cd" in self.current_prompt.command:
@@ -81,7 +80,8 @@ class Terminal:
     def on_release(self):
         if not self.current_prompt.released:
             return
-        self.shared.data.command_history.append(self.current_prompt.command)
+        if self.current_prompt.command.strip() not in self.shared.data.command_history:
+            self.shared.data.command_history.append(self.current_prompt.command)
         self.shared.data.current_index = len(self.shared.data.command_history)
         self.copy_buttons.append(CopyButton(self.current_prompt.output))
         self.prompts.append(Prompt())

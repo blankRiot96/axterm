@@ -1,4 +1,7 @@
+import json
 from pathlib import Path
+
+import pygame
 
 from src.shared import Shared
 
@@ -31,16 +34,38 @@ def exact_match(command_history, command):
     return None
 
 
+def read_config_file(path: Path):
+    with open(path) as f:
+        return json.load(f)
+
+
 class DataManager:
     DATA_FOLDER = get_path("assets/data/")
     COMMAND_HISTORY_FILE = get_path("assets/data/command-history.txt")
+    CONFIG_FILE = get_path("assets/data/config.json")
     HISTORY_LIMIT = 50
 
     def __init__(self) -> None:
         self.shared = Shared()
+        self.history_init()
+        self.config_init()
+
+    def history_init(self):
         self.command_history = read_text_file(self.COMMAND_HISTORY_FILE)
         self.__current_index = len(self.command_history) - 1
         self.current_line = self.command_history[self.__current_index]
+
+    def config_init(self):
+        self.config = read_config_file(self.CONFIG_FILE)
+        self.theme_file = Path(f"assets/data/themes/{self.config['theme']}")
+
+        with open(self.theme_file) as f:
+            self.theme = json.load(f)
+
+        if self.config["image"] is not None:
+            self.image_file = Path(f"assets/data/images/{self.config['image']}")
+        else:
+            self.image_file = None
 
     @property
     def current_index(self):

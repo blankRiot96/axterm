@@ -70,7 +70,7 @@ class Prompt:
         self.output = re.sub(r"\x1b\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]", "", self.output)
 
     def gain_output(self):
-        if self.command in SPECIAL_COMMANDS or "cd" in self.command:
+        if self.command.strip() in SPECIAL_COMMANDS or "cd" in self.command:
             self.output = ""
             return
         try:
@@ -93,7 +93,7 @@ class Prompt:
         self.output_surf = self.FONT_2.render(
             self.output,
             True,
-            "white",
+            self.shared.data.theme["output-color"],
         )
         self.full_surf = pygame.Surface(
             (
@@ -131,7 +131,7 @@ class Prompt:
         self.surf = self.FONT_1.render(
             f"{self.shared.cwd.name}  {self.command}{self.blinky_cursor}",
             True,
-            "white",
+            self.shared.data.theme["text-color"],
         )
         self.region = self.full_surf.get_rect(topleft=(10, 10))
 
@@ -139,7 +139,9 @@ class Prompt:
             self.sim_surf = None
             return
         self.sim_surf = self.FONT_1.render(
-            f"{self.shared.cwd.name}  {self.suggestion}", True, "white"
+            f"{self.shared.cwd.name}  {self.suggestion}",
+            True,
+            self.shared.data.theme["suggestion-color"],
         )
         self.sim_surf.set_alpha(150)
 

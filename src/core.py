@@ -2,15 +2,16 @@ import asyncio
 import os
 
 import pygame
+import pygame._sdl2
 
+from src.data import DataManager
 from src.shared import Shared
 
 
 class Core:
-    BG_COLOR = "#282C34"
-
     def __init__(self) -> None:
         self.shared = Shared()
+        self.shared.data = DataManager()
         self.win_init()
         from src.states import StateManager
 
@@ -21,6 +22,10 @@ class Core:
     def win_init(self):
         pygame.init()
         self.screen = pygame.display.set_mode((1024, 600), pygame.RESIZABLE)
+
+        win = pygame._sdl2.Window.from_display_module()
+        win.opacity = self.shared.data.config["opacity"]
+
         self.shared.screen = self.screen
         self.clock = pygame.time.Clock()
         pygame.display.set_caption("Terminal")
@@ -51,7 +56,7 @@ class Core:
         pygame.display.flip()
 
     def draw(self):
-        self.screen.fill((self.BG_COLOR))
+        self.screen.fill((self.shared.data.theme["background-color"]))
         self.state_manager.draw()
 
     async def run(self):
