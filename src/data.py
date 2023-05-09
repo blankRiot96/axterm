@@ -39,6 +39,11 @@ def read_config_file(path: Path):
         return json.load(f)
 
 
+def write_config_file(path: Path, data: dict):
+    with open(path, "w") as f:
+        return json.dump(data, f, indent=2)
+
+
 class DataManager:
     DATA_FOLDER = get_path("assets/data/")
     COMMAND_HISTORY_FILE = get_path("assets/data/command-history.txt")
@@ -62,6 +67,9 @@ class DataManager:
         with open(self.theme_file) as f:
             self.theme = json.load(f)
 
+        self.config_image()
+
+    def config_image(self):
         if self.config["image"] is not None:
             self.image_file = Path(f"assets/data/images/{self.config['image']}")
         else:
@@ -89,4 +97,5 @@ class DataManager:
 
     def on_exit(self):
         self.cap_history()
+        write_config_file(self.CONFIG_FILE, self.config)
         write_text_file(self.COMMAND_HISTORY_FILE, self.command_history)

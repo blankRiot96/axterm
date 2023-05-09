@@ -6,7 +6,6 @@ from pathlib import Path
 import pygame
 
 from src.button import CopyButton
-from src.data import DataManager
 from src.prompt import Prompt
 from src.shared import Shared
 
@@ -80,8 +79,9 @@ class Terminal:
     def on_release(self):
         if not self.current_prompt.released:
             return
-        if self.current_prompt.command.strip() not in self.shared.data.command_history:
-            self.shared.data.command_history.append(self.current_prompt.command)
+        if self.current_prompt.command.strip() in self.shared.data.command_history:
+            self.shared.data.command_history.remove(self.current_prompt.command.strip())
+        self.shared.data.command_history.append(self.current_prompt.command.strip())
         self.shared.data.current_index = len(self.shared.data.command_history)
         self.copy_buttons.append(CopyButton(self.current_prompt.output))
         self.prompts.append(Prompt())

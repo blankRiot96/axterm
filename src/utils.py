@@ -182,12 +182,28 @@ def get_images(
     return images
 
 
+def scale_image_perfect(
+    image: pygame.Surface, perfect_size: tuple[int, int]
+) -> pygame.Surface:
+    """Scales the given image to stay in the same ratio
+    and always be bigger than the perfect size"""
+
+    width, height = perfect_size
+    iwidth, iheight = image.get_size()
+
+    ratio = max(width / iwidth, height / iheight)
+    new_size = (int(iwidth * ratio), int(iheight * ratio))
+    scaled_image = pygame.transform.smoothscale(image, new_size)
+
+    return scaled_image
+
+
 def render_at(
     base_surf: pygame.Surface,
     surf: pygame.Surface,
     pos: str,
     offset: t.Sequence = (0, 0),
-) -> None:
+) -> pygame.Rect:
     """Renders a surface to a base surface by matching a point.
 
     Example: render_at(screen, widget, "center")
@@ -198,6 +214,8 @@ def render_at(
     surf_rect.x += offset[0]
     surf_rect.y += offset[1]
     base_surf.blit(surf, surf_rect)
+
+    return surf_rect
 
 
 def load_scale_3(file_path: str) -> pygame.Surface:

@@ -3,23 +3,7 @@ import pygame
 from src.shared import Shared
 from src.state_enums import State
 from src.terminal import Terminal
-from src.utils import render_at
-
-
-def scale_background_image(
-    image: pygame.Surface, screen_size: tuple[int, int]
-) -> pygame.Surface:
-    """Scales the given image to stay in the same ratio
-    and always be bigger than the screen size"""
-
-    width, height = screen_size
-    iwidth, iheight = image.get_size()
-
-    ratio = max(width / iwidth, height / iheight)
-    new_size = (int(iwidth * ratio), int(iheight * ratio))
-    scaled_image = pygame.transform.smoothscale(image, new_size)
-
-    return scaled_image
+from src.utils import render_at, scale_image_perfect
 
 
 class GameState:
@@ -31,19 +15,27 @@ class GameState:
             self.original_image = pygame.image.load(
                 self.shared.data.image_file
             ).convert()
-            self.image = scale_background_image(
+            self.image = scale_image_perfect(
                 self.original_image, self.shared.screen.get_size()
             )
         else:
             self.image = None
 
-    def update(self):
-        self.terminal.update()
+    def on_ctrl_s(self):
+        if self.shared.keys[pygame.K_LCTRL] and self.shared.keys[pygame.K_s]:
+            self.next_state = State.SETTINGS
+
+    def on_win_resize(self):
         for event in self.shared.events:
             if event.type == pygame.VIDEORESIZE and self.image is not None:
-                self.image = scale_background_image(
+                self.image = scale_image_perfect(
                     self.original_image, self.shared.screen.get_size()
                 )
+
+    def update(self):
+        self.terminal.update()
+        self.on_win_resize()
+        self.on_ctrl_s()
 
     def draw(self):
         if self.image is not None:
