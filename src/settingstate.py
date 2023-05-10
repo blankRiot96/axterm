@@ -112,6 +112,23 @@ class ImageSelector:
             (pygame.image.load(path).convert(), path.name) for path in image_paths
         ]
         # TODO: Fix this shit
+        """
+        In order to fix "this shit", we have to look at what exactly is causing
+        us the problem here.
+
+        Q. Firstly, what do we want to achieve?
+        A. We want an option for the user to set the background image to None.
+           The CRS will then automatically not render a background image.
+        
+        Q. Secondly, how can we achieve this?
+        A. To achieve this, we can allow the user to click on one of the image
+           boxes to then re-config the image file. 
+
+        Q. Finally, what is the problem here?
+        A. The problem seems to be divided into 2 parts:
+            (i) The mouse hovering seems to fucked
+            (ii) It doesn't seem to support more than 3x3 grids 
+        """
         # background_surf = pygame.Surface(ImageBox.BOX_SIZE)
         # background_surf.fill(self.shared.data.theme["background-color"])
         # render_at(background_surf, )
