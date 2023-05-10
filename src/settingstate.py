@@ -4,6 +4,7 @@ from pathlib import Path
 import pygame
 
 from src.shared import Shared
+from src.slider import HorizontalSlider
 from src.state_enums import State
 from src.utils import Time, get_font, render_at, scale_image_perfect
 
@@ -153,11 +154,29 @@ class OpacitySelector:
     Interval: [0.2, 1.0]
     """
 
+    def __init__(self) -> None:
+        self.shared = Shared()
+        self.slider_rect = pygame.Rect(0, 0, 300, 100)
+        self.slider_rect.center = Shared.SRECT.center
+        self.slider = HorizontalSlider(
+            self.slider_rect,
+            bg_color=self.shared.data.theme["text-color"],
+            fg_color=self.shared.data.theme["background-color"],
+            min_value=0.2,
+            max_value=1.0,
+            step=0.01,
+            callback=self.on_slide,
+        )
+
+    def on_slide(self, value):
+        self.shared.win.opacity = value
+        self.shared.data.config["opacity"] = value
+
     def update(self):
-        ...
+        self.slider.update(self.shared.events)
 
     def draw(self):
-        ...
+        self.slider.draw(self.shared.screen)
 
 
 class ThemeBox:

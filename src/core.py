@@ -23,8 +23,8 @@ class Core:
         pygame.init()
         self.screen = pygame.display.set_mode((1024, 600), pygame.RESIZABLE)
 
-        win = pygame._sdl2.Window.from_display_module()
-        win.opacity = self.shared.data.config["opacity"]
+        self.shared.win = pygame._sdl2.Window.from_display_module()
+        self.shared.win.opacity = self.shared.data.config["opacity"]
 
         self.shared.screen = self.screen
         self.clock = pygame.time.Clock()
