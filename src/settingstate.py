@@ -152,24 +152,140 @@ class OpacitySelector:
     Interval: [0.2, 1.0]
     """
 
+    def update(self):
+        ...
+
+    def draw(self):
+        ...
+
 
 class ThemeSelector:
     """Dropbox(?) to pick appropriate theme"""
+
+    def update(self):
+        ...
+
+    def draw(self):
+        ...
+
+
+class Button:
+    SIZE = (70, 20)
+    FONT = get_font("assets/fonts/regular1.ttf", 12)
+
+    def __init__(self, name: str, pos: int) -> None:
+        self.shared = Shared()
+        self.name = name
+        self.pos = pos
+        self.get_positional_rect()
+        self.image = pygame.Surface((self.SIZE))
+        self.image.fill(self.shared.data.theme["text-color"])
+        render_at(
+            self.image,
+            self.FONT.render(
+                self.name, True, self.shared.data.theme["background-color"]
+            ),
+            "center",
+        )
+        self.click_timer = Time(0.1)
+        self.click_highlight_done = True
+        self.clicked = False
+
+        self.__overlay_alpha = 0
+        self.overlay_surf = pygame.Surface(self.SIZE)
+
+    def get_positional_rect(self):
+        self.rect = pygame.Rect((0, 0), self.SIZE)
+        self.rect.midtop = (
+            self.shared.screen.get_rect().midtop[0] - self.SIZE[0],
+            self.shared.screen.get_rect().midtop[1],
+        )
+
+        self.rect.x += self.SIZE[0] * self.pos
+
+    @property
+    def overlay_alpha(self):
+        return self.__overlay_alpha
+
+    @overlay_alpha.setter
+    def overlay_alpha(self, value):
+        if value > 100:
+            value = 100
+        if value < 0:
+            value = 0
+        self.__overlay_alpha = value
+
+    def on_hover(self):
+        if not self.hovering:
+            self.overlay_alpha -= 300 * self.shared.dt
+            return
+
+        self.overlay_alpha += 300 * self.shared.dt
+
+    def on_click(self):
+        if not self.clicked:
+            return
+
+        self.click_timer.reset()
+        self.click_highlight_done = False
+
+    def highlight_click(self):
+        self.overlay_surf.fill("yellow")
+        if self.click_timer.tick():
+            self.overlay_surf.fill("black")
+            self.click_highlight_done = True
+
+    def update(self):
+        self.hovering = self.rect.collidepoint(self.shared.mouse_pos)
+        self.clicked = self.hovering and self.shared.clicked
+
+        self.on_hover()
+        self.on_click()
+
+        self.overlay_surf.set_alpha(self.overlay_alpha)
+        if not self.click_highlight_done:
+            self.highlight_click()
+
+    def draw(self):
+        self.shared.screen.blit(self.image, self.rect)
+        self.shared.screen.blit(self.overlay_surf, self.rect)
 
 
 class SettingState:
     def __init__(self) -> None:
         self.shared = Shared()
         self.next_state: State | None = None
-        self.image_selector = ImageSelector()
+        self.current_setting = ImageSelector()
+        self.settings = {
+            "Image": ImageSelector(),
+            "Theme": ThemeSelector(),
+            "Opacity": OpacitySelector(),
+        }
+        self.buttons = (
+            Button("Image", 0),
+            Button("Theme", 1),
+            Button("Opacity", 2),
+        )
+
+    def update_buttons(self):
+        for button in self.buttons:
+            if self.shared.resizing:
+                button.get_positional_rect()
+
+            if button.clicked:
+                self.current_setting = self.settings.get(button.name)
+            button.update()
 
     def on_ctrl_t(self):
         if self.shared.keys[pygame.K_LCTRL] and self.shared.keys[pygame.K_t]:
             self.next_state = State.TERMINAL
 
     def update(self):
-        self.image_selector.update()
+        self.current_setting.update()
         self.on_ctrl_t()
+        self.update_buttons()
 
     def draw(self):
-        self.image_selector.draw()
+        self.current_setting.draw()
+        for button in self.buttons:
+            button.draw()

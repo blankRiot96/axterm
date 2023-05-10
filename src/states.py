@@ -41,6 +41,7 @@ class StateManager:
             )
         else:
             self.image = None
+        self.shared.resizing = False
 
     @property
     def state_enum(self) -> State:
@@ -52,11 +53,10 @@ class StateManager:
         self.state_obj: StateLike = self.state_dict.get(self.__state_enum)()
 
     def on_win_resize(self):
+        self.shared.resizing = False
         for event in self.shared.events:
-            if event.type == pygame.VIDEORESIZE and self.image is not None:
-                self.image = scale_image_perfect(
-                    self.original_image, self.shared.screen.get_size()
-                )
+            if event.type == pygame.VIDEORESIZE:
+                self.shared.resizing = True
 
     def update(self):
         self.on_win_resize()
@@ -67,6 +67,11 @@ class StateManager:
 
         if self.state_obj.next_state is not None:
             self.state_enum = self.state_obj.next_state
+
+        if self.shared.resizing:
+            self.image = scale_image_perfect(
+                self.original_image, self.shared.screen.get_size()
+            )
 
         self.last_image_file = self.shared.data.image_file
 
