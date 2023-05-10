@@ -11,7 +11,7 @@ from src.shared import Shared
 
 
 class Terminal:
-    SCROLL_SCALE = 15
+    SCROLL_SCALE = 30
 
     def __init__(self) -> None:
         self.shared = Shared()

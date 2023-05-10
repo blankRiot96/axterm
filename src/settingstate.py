@@ -66,9 +66,6 @@ class ImageBox:
         self.click_highlight_done = False
         self.shared.data.config["image"] = self.image_id
         self.shared.data.config_image()
-        self.shared.selected_image = scale_image_perfect(
-            self.original_image, self.shared.screen.get_size()
-        )
 
     def highlight_click(self):
         self.overlay_surf.fill("yellow")
@@ -102,9 +99,6 @@ class ImageSelector:
         self.get_surf()
         self.shared.diff = pygame.Vector2(self.surf_rect.topleft)
 
-        if not hasattr(self.shared, "selected_image"):
-            self.shared.selected_image = None
-
     def get_surf(self):
         last_box = self.boxes[-1]
         width = (last_box.row + 1) * (ImageBox.BOX_SIZE[0] + ImageBox.PADDING)
@@ -124,20 +118,11 @@ class ImageSelector:
         # images.insert(0, (background_surf, None))
         self.boxes = [ImageBox(*image_pack, n) for n, image_pack in enumerate(images)]
 
-    def on_win_resize(self):
-        for event in self.shared.events:
-            if event.type == pygame.VIDEORESIZE:
-                self.shared.diff = pygame.Vector2(self.surf_rect.topleft)
-
     def update(self):
         for box in self.boxes:
             box.update()
-        self.on_win_resize()
 
     def draw(self):
-        if self.shared.selected_image is not None:
-            render_at(self.shared.screen, self.shared.selected_image, "center")
-
         for box in self.boxes:
             box.draw(self.surf)
         self.surf_rect = render_at(self.shared.screen, self.surf, "center")

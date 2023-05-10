@@ -1,8 +1,6 @@
 import json
 from pathlib import Path
 
-import pygame
-
 from src.shared import Shared
 
 
