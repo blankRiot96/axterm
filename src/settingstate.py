@@ -20,7 +20,6 @@ class ImageBox:
         self, image: pygame.Surface, image_id: None | str, nth_box: int
     ) -> None:
         self.shared = Shared()
-        self.original_image = image
         self.image = pygame.Surface(self.BOX_SIZE)
         render_at(self.image, scale_image_perfect(image, self.BOX_SIZE), "center")
         self.image_id = image_id
@@ -156,8 +155,9 @@ class OpacitySelector:
 
     def __init__(self) -> None:
         self.shared = Shared()
+        center = self.shared.screen.get_rect().center
         self.slider_rect = pygame.Rect(0, 0, 300, 100)
-        self.slider_rect.center = Shared.SRECT.center
+        self.slider_rect.center = center
         self.slider = HorizontalSlider(
             self.slider_rect,
             bg_color=self.shared.data.theme["text-color"],
@@ -174,6 +174,11 @@ class OpacitySelector:
 
     def update(self):
         self.slider.update(self.shared.events)
+
+        if self.shared.resizing:
+            center = self.shared.screen.get_rect().center
+            self.slider.rail.center = center
+            self.slider.x, self.slider.y = center
 
     def draw(self):
         self.slider.draw(self.shared.screen)
@@ -429,13 +434,8 @@ class SettingState:
                 self.current_setting = self.settings.get(button.name)
             button.update()
 
-    def on_ctrl_t(self):
-        if self.shared.keys[pygame.K_LCTRL] and self.shared.keys[pygame.K_t]:
-            self.next_state = State.TERMINAL
-
     def update(self):
         self.current_setting.update()
-        self.on_ctrl_t()
         self.update_buttons()
 
     def draw(self):

@@ -12,13 +12,8 @@ class TerminalState:
         self.next_state: State | None = None
         self.terminal = Terminal()
 
-    def on_ctrl_s(self):
-        if self.shared.keys[pygame.K_LCTRL] and self.shared.keys[pygame.K_s]:
-            self.next_state = State.SETTINGS
-
     def update(self):
         self.terminal.update()
-        self.on_ctrl_s()
 
     def draw(self):
         self.terminal.draw()

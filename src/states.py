@@ -2,6 +2,7 @@ import typing as t
 
 import pygame
 
+from src.controlstate import ControlState
 from src.settingstate import SettingState
 from src.shared import Shared
 from src.state_enums import State
@@ -23,11 +24,12 @@ class StateManager:
     def __init__(self) -> None:
         self.shared = Shared()
         self.state_dict: dict[State, StateLike] = {
-            State.TERMINAL: TerminalState,
-            State.SETTINGS: SettingState,
+            State.TERMINAL: TerminalState(),
+            State.SETTINGS: SettingState(),
+            State.CONTROLS: ControlState(),
         }
         self.state_enum = State.TERMINAL
-        self.state_obj: StateLike = self.state_dict.get(self.state_enum)()
+        self.state_obj: StateLike = self.state_dict.get(self.state_enum)
         self.init_image_file()
         self.last_image_file = self.shared.data.image_file
 
@@ -50,7 +52,7 @@ class StateManager:
     @state_enum.setter
     def state_enum(self, next_state: State) -> None:
         self.__state_enum = next_state
-        self.state_obj: StateLike = self.state_dict.get(self.__state_enum)()
+        self.state_obj: StateLike = self.state_dict.get(self.__state_enum)
 
     def on_win_resize(self):
         self.shared.resizing = False
@@ -58,8 +60,30 @@ class StateManager:
             if event.type == pygame.VIDEORESIZE:
                 self.shared.resizing = True
 
+    def on_ctrl_s(self):
+        if self.shared.keys[pygame.K_LCTRL] and self.shared.keys[pygame.K_s]:
+            self.state_obj.next_state = State.SETTINGS
+
+    def on_ctrl_t(self):
+        if self.shared.keys[pygame.K_LCTRL] and self.shared.keys[pygame.K_t]:
+            self.state_obj.next_state = State.TERMINAL
+
+    def on_ctrl_q(self):
+        if self.shared.keys[pygame.K_LCTRL] and self.shared.keys[pygame.K_q]:
+            self.state_obj.next_state = State.CONTROLS
+
+    def fit_bg_image(self):
+        if self.shared.resizing:
+            self.image = scale_image_perfect(
+                self.original_image, self.shared.screen.get_size()
+            )
+
     def update(self):
+        self.on_ctrl_s()
+        self.on_ctrl_q()
+        self.on_ctrl_t()
         self.on_win_resize()
+        self.fit_bg_image()
         self.state_obj.update()
 
         if self.shared.data.image_file != self.last_image_file:
@@ -67,11 +91,6 @@ class StateManager:
 
         if self.state_obj.next_state is not None:
             self.state_enum = self.state_obj.next_state
-
-        if self.shared.resizing:
-            self.image = scale_image_perfect(
-                self.original_image, self.shared.screen.get_size()
-            )
 
         self.last_image_file = self.shared.data.image_file
 

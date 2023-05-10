@@ -1,5 +1,6 @@
 import asyncio
 import os
+import time
 
 import pygame
 import pygame._sdl2
@@ -17,7 +18,9 @@ class Core:
 
         self.shared.dt = 0.0
         self.shared.mouse_pos = (0, 0)
+        start = time.perf_counter()
         self.state_manager = StateManager()
+        print(f"Took {time.perf_counter() - start:.2f}s to load")
 
     def win_init(self):
         pygame.init()
