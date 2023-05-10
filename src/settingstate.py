@@ -4,7 +4,7 @@ import pygame
 
 from src.shared import Shared
 from src.state_enums import State
-from src.utils import Time, render_at, scale_image_perfect
+from src.utils import Time, get_font, render_at, scale_image_perfect
 
 
 class ImageBox:
@@ -12,12 +12,15 @@ class ImageBox:
 
     BOX_SIZE = (220, 150)
     PADDING = 10
+    N_ROWS = 3
 
-    def __init__(self, image: pygame.Surface, image_id: str, nth_box: int) -> None:
+    def __init__(
+        self, image: pygame.Surface, image_id: None | str, nth_box: int
+    ) -> None:
         self.shared = Shared()
         self.original_image = image
         self.image = pygame.Surface(self.BOX_SIZE)
-        self.image.blit(scale_image_perfect(image, self.BOX_SIZE), (0, 0))
+        render_at(self.image, scale_image_perfect(image, self.BOX_SIZE), "center")
         self.image_id = image_id
         self.nth_box = nth_box
         self.get_grid_pos()
@@ -41,8 +44,8 @@ class ImageBox:
         self.__overlay_alpha = value
 
     def get_grid_pos(self):
-        self.row = self.nth_box // 3
-        self.col = self.nth_box % 3
+        self.row = self.nth_box // ImageBox.N_ROWS
+        self.col = self.nth_box % ImageBox.N_ROWS
 
     def get_screen_pos(self):
         self.pos = pygame.Vector2(
@@ -89,6 +92,23 @@ class ImageBox:
         surf.blit(self.overlay_surf, self.pos)
 
 
+class DefaultBox(ImageBox):
+    FONT = get_font("assets/fonts/regular1.ttf", 16)
+
+    def __init__(self) -> None:
+        image = pygame.Surface(ImageBox.BOX_SIZE)
+        super().__init__(image, None, 0)
+        self.image.fill(self.shared.data.theme["background-color"])
+        pygame.draw.rect(
+            self.image, "yellow", pygame.Rect((0, 0), ImageBox.BOX_SIZE), 5
+        )
+        render_at(
+            self.image,
+            self.FONT.render("default", True, self.shared.data.theme["text-color"]),
+            "center",
+        )
+
+
 class ImageSelector:
     """Grid selector to pick a background image
     for the terminal"""
@@ -101,43 +121,25 @@ class ImageSelector:
 
     def get_surf(self):
         last_box = self.boxes[-1]
-        width = (last_box.row + 1) * (ImageBox.BOX_SIZE[0] + ImageBox.PADDING)
-        height = (last_box.col + 1) * (ImageBox.BOX_SIZE[1] + ImageBox.PADDING)
+        width = ImageBox.N_ROWS * (ImageBox.BOX_SIZE[0] + ImageBox.PADDING)
+        height = (last_box.row + 1) * (ImageBox.BOX_SIZE[1] + ImageBox.PADDING)
         self.surf = pygame.Surface((width, height), pygame.SRCALPHA)
         self.surf_rect = render_at(self.shared.screen, self.surf, "center")
 
     def get_image_boxes(self):
         image_paths = Path("assets/data/images").iterdir()
-        images = [
+        images = (
             (pygame.image.load(path).convert(), path.name) for path in image_paths
-        ]
-        # TODO: Fix this shit
-        """
-        In order to fix "this shit", we have to look at what exactly is causing
-        us the problem here.
-
-        Q. Firstly, what do we want to achieve?
-        A. We want an option for the user to set the background image to None.
-           The CRS will then automatically not render a background image.
-        
-        Q. Secondly, how can we achieve this?
-        A. To achieve this, we can allow the user to click on one of the image
-           boxes to then re-config the image file. 
-
-        Q. Finally, what is the problem here?
-        A. The problem seems to be divided into 2 parts:
-            (i) The mouse hovering seems to fucked
-            (ii) It doesn't seem to support more than 3x3 grids 
-        """
-        # background_surf = pygame.Surface(ImageBox.BOX_SIZE)
-        # background_surf.fill(self.shared.data.theme["background-color"])
-        # render_at(background_surf, )
-        # images.insert(0, (background_surf, None))
-        self.boxes = [ImageBox(*image_pack, n) for n, image_pack in enumerate(images)]
+        )
+        self.boxes = [DefaultBox()]
+        self.boxes.extend(
+            ImageBox(*image_pack, n + 1) for n, image_pack in enumerate(images)
+        )
 
     def update(self):
         for box in self.boxes:
             box.update()
+        self.shared.diff = pygame.Vector2(self.surf_rect.topleft)
 
     def draw(self):
         for box in self.boxes:
