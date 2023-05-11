@@ -172,13 +172,16 @@ class OpacitySelector:
         self.shared.win.opacity = value
         self.shared.data.config["opacity"] = value
 
+    def on_win_resize(self):
+        center = self.shared.screen.get_rect().center
+        self.slider.rail.center = center
+        self.slider.x, self.slider.y = center
+
     def update(self):
         self.slider.update(self.shared.events)
 
         if self.shared.resizing:
-            center = self.shared.screen.get_rect().center
-            self.slider.rail.center = center
-            self.slider.x, self.slider.y = center
+            self.on_win_resize()
 
     def draw(self):
         self.slider.draw(self.shared.screen)
@@ -434,9 +437,19 @@ class SettingState:
                 self.current_setting = self.settings.get(button.name)
             button.update()
 
+    def on_win_resize(self):
+        for button in self.buttons:
+            button.get_positional_rect()
+        for setting in self.settings.values():
+            if hasattr(setting, "on_win_resize"):
+                setting.on_win_resize()
+
     def update(self):
         self.current_setting.update()
         self.update_buttons()
+
+        if self.shared.resizing:
+            self.on_win_resize()
 
     def draw(self):
         self.current_setting.draw()

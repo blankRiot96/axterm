@@ -28,7 +28,7 @@ class StateManager:
             State.SETTINGS: SettingState(),
             State.CONTROLS: ControlState(),
         }
-        self.state_enum = State.TERMINAL
+        self.state_enum = State.CONTROLS
         self.state_obj: StateLike = self.state_dict.get(self.state_enum)
         self.init_image_file()
         self.last_image_file = self.shared.data.image_file
@@ -73,10 +73,15 @@ class StateManager:
             self.state_obj.next_state = State.CONTROLS
 
     def fit_bg_image(self):
-        if self.shared.resizing:
+        if self.shared.resizing and self.image is not None:
             self.image = scale_image_perfect(
                 self.original_image, self.shared.screen.get_size()
             )
+
+        if self.shared.resizing:
+            for obj in self.state_dict.values():
+                if hasattr(obj, "on_win_resize"):
+                    obj.on_win_resize()
 
     def update(self):
         self.on_ctrl_s()

@@ -10,9 +10,11 @@ class ControlState:
         self.shared = Shared()
         self.surface = self.FONT.render(
             """
+CTRL + Q -> Controls
 CTRL + T -> Terminal
 CTRL + S -> Settings
-CTRL + Q -> Controls
+CTRL + X -> Delete Line
+CTRL + G -> Goto top
             """,
             True,
             self.shared.data.theme["text-color"],
