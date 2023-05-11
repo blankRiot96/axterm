@@ -116,6 +116,8 @@ class ImageSelector:
 
     def __init__(self) -> None:
         self.shared = Shared()
+
+    def post_init(self):
         self.get_image_boxes()
         self.get_surf()
         self.shared.diff = pygame.Vector2(self.surf_rect.topleft)
@@ -416,17 +418,18 @@ class SettingState:
     def __init__(self) -> None:
         self.shared = Shared()
         self.next_state: State | None = None
-        self.current_setting = ImageSelector()
         self.settings = {
             "Image": ImageSelector(),
             "Theme": ThemeSelector(),
             "Opacity": OpacitySelector(),
         }
+        self.current_setting = self.settings["Image"]
         self.buttons = (
             Button("Image", 0),
             Button("Theme", 1),
             Button("Opacity", 2),
         )
+        self.first_load = True
 
     def update_buttons(self):
         for button in self.buttons:
@@ -445,6 +448,9 @@ class SettingState:
                 setting.on_win_resize()
 
     def update(self):
+        if self.first_load:
+            self.settings["Image"].post_init()
+            self.first_load = False
         self.current_setting.update()
         self.update_buttons()
 
@@ -452,6 +458,9 @@ class SettingState:
             self.on_win_resize()
 
     def draw(self):
+        if self.first_load:
+            self.settings["Image"].post_init()
+            self.first_load = False
         self.current_setting.draw()
         for button in self.buttons:
             button.draw()

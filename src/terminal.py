@@ -60,6 +60,7 @@ class Terminal:
             self.perm_offset = 0
 
     def clear_prompts(self):
+        self.perm_offset = 0
         self.copy_buttons.clear()
         self.prompts.clear()
         self.prompts.append(Prompt())
