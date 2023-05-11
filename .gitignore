@@ -6,6 +6,7 @@
 assets/data/command-history.txt
 test.py
 *.prof
+*.exe
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
